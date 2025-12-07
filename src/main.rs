@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
-use std::fs::File;
-use std::io::prelude::*;
+
+use codecrafters_sqlite::prelude::*;
 
 fn main() -> Result<()> {
     // Parse arguments
@@ -10,27 +10,21 @@ fn main() -> Result<()> {
         2 => bail!("Missing <command>"),
         _ => {}
     }
+    eprintln!("Logs from your program will appear here!");
 
     // Parse command and act accordingly
     let command = &args[2];
     match command.as_str() {
         ".dbinfo" => {
-            let mut file = File::open(&args[1])?;
-            let mut header = [0; 100];
-            file.read_exact(&mut header)?;
+            let mut reader = SqliteReader::new(&args[1])?;
+            let first_page = reader.read_page(1)?;
 
-            // The page size is stored at the 16th byte offset, using 2 bytes in big-endian order
-            #[allow(unused_variables)]
-            let page_size = u16::from_be_bytes([header[16], header[17]]);
-
-            // You can use print statements as follows for debugging, they'll be visible when running tests.
-            eprintln!("Logs from your program will appear here!");
-
-            // TODO: Uncomment the code below to pass the first stage
-            println!("database page size: {}", page_size);
+            println!("database page size: {}", reader.header.page_size);
+            println!("number of tables: {}", first_page.page_header.cell_count)
         }
         _ => bail!("Missing or invalid command passed: {}", command),
     }
+    
 
     Ok(())
 }
