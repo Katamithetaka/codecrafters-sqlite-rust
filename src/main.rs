@@ -6,12 +6,14 @@ use codecrafters_sqlite::{
 };
 
 const SCHEMA_TYPE_COLUMN: usize = 0;
+#[allow(unused)]
 const SCHEMA_OBJECT_NAME_COLUMN: usize = 1;
 const SCHEMA_TABLE_NAME_COLUMN: usize = 2;
 const SCHEMA_ROOT_PAGE_COLUMN: usize = 3;
 const SCHEMA_SQL_COLUMN: usize = 4;
 const SCHEMA_PAGE_NUMBER: u64 = 1;
 const TABLE_TYPE_STR: &str = "table";
+#[allow(unused)]
 const INDEX_TYPE_STR: &str = "index";
 
 
@@ -84,7 +86,6 @@ fn main() -> Result<()> {
                 .join("\n");
             println!("{result}");
         }
-        _ => bail!("Missing or invalid command passed: {}", command),
     }
 
     Ok(())

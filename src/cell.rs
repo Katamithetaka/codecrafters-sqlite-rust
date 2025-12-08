@@ -1,4 +1,4 @@
-use crate::{leaf_cell::{LazyLeafCell, SerialType}, page::Page, parsing_error::ParsingError, reader::SqliteReader, varint::parse_varint};
+use crate::{interior_cell::InteriorCell, leaf_cell::{LazyLeafCell, SerialType}, page::Page, parsing_error::ParsingError, reader::{SqliteReader, get_num_from_be}, varint::parse_varint};
 
 
 pub fn parse_leaf_cell_lazy(bytes: &[u8], cell_offset: usize) -> Result<LazyLeafCell, ParsingError> {
@@ -22,10 +22,28 @@ pub fn parse_leaf_cell_lazy(bytes: &[u8], cell_offset: usize) -> Result<LazyLeaf
     })
 }
 
-pub fn get_cells_lazy(page: &Page, _sqlite_reader: &mut SqliteReader) -> Result<Vec<LazyLeafCell>, ParsingError> {
+pub fn parse_interior_cell(bytes: &[u8], cell_offset: usize) -> Result<InteriorCell, ParsingError> {
+    let mut offset = cell_offset; 
+    return Ok(InteriorCell { page_number: get_num_from_be(&mut offset, bytes)?, rowid: parse_varint(&mut offset, bytes)? })
+}
+
+
+pub fn get_cells_lazy(page: &Page, reader: &mut SqliteReader) -> Result<Vec<LazyLeafCell>, ParsingError> {
     match page.page_header.page_type {
         crate::page_header::BtreePageType::InteriorIndexPage => panic!("This method shouldn't be used for index cells"),
-        crate::page_header::BtreePageType::InteriorTablePage => unimplemented!(),
+        crate::page_header::BtreePageType::InteriorTablePage => {
+            let cell_array = page.parse_cell_pointer_array();
+            let cells: Result<Vec<InteriorCell>, ParsingError> = cell_array.iter().map(|cell| parse_interior_cell(&page.page, *cell as usize - page.page_start)).collect();
+            let mut page_numbers: Vec<u32> = cells?.iter().map(|cells| cells.page_number).collect();
+            let right_most_page = page.page_header.rightmost_pointer.ok_or(ParsingError::InvalidPageType)?;
+            page_numbers.push(right_most_page);
+            let v = page_numbers.iter().flat_map(|page_number| {
+                let result = reader.read_page(*page_number as u64);
+                result.map(|page| get_cells_lazy(&page, reader))
+            }).collect::<Result<Vec<_>, _>>()?;
+            
+            return Ok(v.into_iter().flatten().collect());
+        },
         crate::page_header::BtreePageType::LeafIndexPage => panic!("This method shouldn't be used for index cells"),
         crate::page_header::BtreePageType::LeafTablePage => {
             let cell_array = page.parse_cell_pointer_array();
