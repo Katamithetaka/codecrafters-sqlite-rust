@@ -40,6 +40,7 @@ impl TryFrom<u8> for BtreePageType {
 
 
 
+#[derive(Clone)]
 pub struct PageHeader {
     pub page_type: BtreePageType,
     pub first_freeblock: u16,

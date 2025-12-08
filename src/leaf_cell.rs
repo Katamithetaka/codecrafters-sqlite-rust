@@ -1,5 +1,5 @@
-
-use crate::{parsing_error::ParsingError};
+use crate::parsing_error::ParsingError;
+use std::rc::Rc;
 
 #[derive(Clone, Copy, Debug)]
 pub enum SerialType {
@@ -15,11 +15,8 @@ pub enum SerialType {
     True,
     Unused,
     Blob(usize),
-    String(usize)
+    String(usize),
 }
-
-
-
 
 impl SerialType {
     pub fn from_varint(value: i128) -> Result<SerialType, ParsingError> {
@@ -37,11 +34,11 @@ impl SerialType {
             10 | 11 => Self::Unused,
             n if n >= 12 && n % 2 == 0 => Self::Blob(((n - 12) / 2) as usize),
             n if n >= 13 && n % 2 != 0 => Self::String(((n - 13) / 2) as usize),
-            _ => return Err(ParsingError::InvalidVarint)        
+            _ => return Err(ParsingError::InvalidVarint),
         };
         return Ok(value);
     }
-    
+
     pub fn size(&self) -> usize {
         return match self {
             SerialType::Null => 0,
@@ -57,9 +54,9 @@ impl SerialType {
             SerialType::Unused => 0,
             SerialType::Blob(size) => *size,
             SerialType::String(size) => *size,
-        }
+        };
     }
-    
+
     pub fn parse_value(&self, bytes: &[u8]) -> Result<String, ParsingError> {
         match self {
             SerialType::Null => Ok("NULL".to_string()),
@@ -74,10 +71,13 @@ impl SerialType {
             SerialType::True => Ok("true".to_string()),
             SerialType::Unused => unreachable!(),
             SerialType::Blob(_) => unimplemented!(),
-            SerialType::String(size) => Ok(format!("{}", String::from_utf8_lossy(&bytes[0..*size]).to_string())),
+            SerialType::String(size) => Ok(format!(
+                "{}",
+                String::from_utf8_lossy(&bytes[0..*size]).to_string()
+            )),
         }
     }
-    
+
     pub fn parse_value_cmp(&self, bytes: &[u8]) -> Result<String, ParsingError> {
         match self {
             SerialType::Null => Ok("NULL".to_string()),
@@ -92,7 +92,9 @@ impl SerialType {
             SerialType::True => Ok("true".to_string()),
             SerialType::Unused => unreachable!(),
             SerialType::Blob(_) => unimplemented!(),
-            SerialType::String(size) => Ok(format!("\"{}\"", String::from_utf8_lossy(&bytes[0..*size]))),
+            SerialType::String(size) => {
+                Ok(format!("\"{}\"", String::from_utf8_lossy(&bytes[0..*size])))
+            }
         }
     }
 }
@@ -103,38 +105,45 @@ pub struct LazyLeafCell {
     pub rowid: i128,
     pub records_begin: usize,
     pub record_types: Vec<SerialType>,
+    pub page_data: Rc<[u8]>,
 }
 
 impl LazyLeafCell {
-    
     pub fn get_column_offset(&self, column: usize) -> usize {
-        return self.record_types[0..column].iter().map(|value| value.size()).sum::<usize>() + self.records_begin
+        return self.record_types[0..column]
+            .iter()
+            .map(|value| value.size())
+            .sum::<usize>()
+            + self.records_begin;
     }
-    
-    pub fn get_column_size(&self, column: usize) -> usize {
-        return self.record_types[column].size()
-    }
-    
-    pub fn get_column_type(&self, column: usize) -> SerialType {
-        return self.record_types[column]
-    }
-    
 
-    pub fn get_column(&self, page_bytes: &[u8], column: usize) -> Result<String, ParsingError> {
-        let column_offset = self.get_column_offset(column);
-        let column_size = self.get_column_size(column);
-        let column_type = self.get_column_type(column);
-        let begin_index = column_offset;
-        let end_index = begin_index + column_size;
-        column_type.parse_value(&page_bytes[begin_index..end_index])
+    pub fn get_column_size(&self, column: usize) -> usize {
+        return self.record_types[column].size();
     }
-    
-    pub fn get_column_cmp(&self, page_bytes: &[u8], column: usize) -> Result<String, ParsingError> {
+
+    pub fn get_column_type(&self, column: usize) -> SerialType {
+        return self.record_types[column];
+    }
+
+    pub fn get_column(&self, _page_bytes: &[u8], column: usize) -> Result<String, ParsingError> {
         let column_offset = self.get_column_offset(column);
         let column_size = self.get_column_size(column);
         let column_type = self.get_column_type(column);
         let begin_index = column_offset;
         let end_index = begin_index + column_size;
-        column_type.parse_value_cmp(&page_bytes[begin_index..end_index])
+        column_type.parse_value(&self.page_data[begin_index..end_index])
+    }
+
+    pub fn get_column_cmp(
+        &self,
+        _page_bytes: &[u8],
+        column: usize,
+    ) -> Result<String, ParsingError> {
+        let column_offset = self.get_column_offset(column);
+        let column_size = self.get_column_size(column);
+        let column_type = self.get_column_type(column);
+        let begin_index = column_offset;
+        let end_index = begin_index + column_size;
+        column_type.parse_value_cmp(&self.page_data[begin_index..end_index])
     }
 }

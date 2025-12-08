@@ -56,7 +56,7 @@ fn main() -> Result<()> {
         request => {
             
             let request = parse_select(request)?;
-            
+            eprintln!("{}", request);
             let mut reader = SqliteReader::new(&args[1])?;
             let table_name = request.table_name.clone();
             let select_where = where_builder(WhereColumn::Column(SCHEMA_TYPE_COLUMN), Op::Eq, quoted(TABLE_TYPE_STR)).and(
@@ -68,14 +68,14 @@ fn main() -> Result<()> {
             )
             .where_cmp(select_where);
             
-
+            
             let table_data = select.execute(&mut reader)?;
             assert!(table_data.len() == 1);
             
             let (root_page, sql) = (u64::from_str_radix(&table_data[0][0], 10)?, table_data[0][1].clone());
             
             let table = parse_table(&sql)?;
-            
+            eprintln!("{:?}", table);
             let select = SelectBuilder::from_select_and_table(root_page, request, table)?;
             
             let result = select.execute(&mut reader)?;

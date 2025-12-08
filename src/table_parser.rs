@@ -72,7 +72,9 @@ pub fn parse_table(sql: &str) -> Result<Table, ParsingError> {
     let mut column_index = 0;
     for column in columns.iter_mut() {
         match column {
-            TableColumn::RowId(_) => {}
+            TableColumn::RowId(_) => {
+                column_index += 1;
+            }
             TableColumn::Column(index, _) => {
                 *index = column_index;
                 column_index += 1;
