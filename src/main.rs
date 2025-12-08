@@ -5,7 +5,7 @@ use codecrafters_sqlite::{prelude::*, select_builder::{Op, SelectBuilder}};
 fn main() -> Result<()> {
     // Parse arguments
     let args = std::env::args().collect::<Vec<_>>();
-    let args = vec!["program".to_string(), "sample.db".to_string(), ".tables".to_string()];
+    //let args = vec!["program".to_string(), "sample.db".to_string(), ".tables".to_string()];
     match args.len() {
         0 | 1 => bail!("Missing <database path> and <command>"),
         2 => bail!("Missing <command>"),
