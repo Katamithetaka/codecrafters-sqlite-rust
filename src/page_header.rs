@@ -47,7 +47,6 @@ pub struct PageHeader {
     pub cell_content_start: u16,
     pub fragmented_free_bytes_count: u8,
     pub rightmost_pointer: Option<u32>,
-    
 }
 
 

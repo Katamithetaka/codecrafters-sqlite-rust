@@ -51,7 +51,8 @@ impl SqliteReader {
         let page_header = read_page_header(&mut offset, &self.buffer)?;
         return Ok(Page {
             page_header: page_header,
-            page: self.buffer[(offset+1)..].to_vec(),
+            page: self.buffer[(offset)..].to_vec(),
+            page_start: offset,
         })
     }
 }

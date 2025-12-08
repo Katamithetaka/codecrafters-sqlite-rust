@@ -5,7 +5,8 @@ pub enum ParsingError {
     IoError(io::Error),
     SliceConversionError(TryFromSliceError),
     InvalidHeaderString,
-    InvalidPageType
+    InvalidPageType,
+    InvalidVarint
 }
 
 impl std::error::Error for ParsingError {
@@ -14,7 +15,8 @@ impl std::error::Error for ParsingError {
             ParsingError::IoError(error) => Some(error),
             ParsingError::SliceConversionError(try_from_slice_error) => Some(try_from_slice_error),
             ParsingError::InvalidHeaderString => None,
-            ParsingError::InvalidPageType => None
+            ParsingError::InvalidPageType => None,
+            ParsingError::InvalidVarint => None
         }
     }
 
@@ -31,6 +33,7 @@ impl Display for ParsingError {
             ParsingError::SliceConversionError(try_from_slice_error) => f.write_fmt(format_args!("Slice Error {try_from_slice_error}")),
             ParsingError::InvalidHeaderString => f.write_str("Invalid header string for sqlite file"),
             ParsingError::InvalidPageType => f.write_str("Invalid page type"),
+            ParsingError::InvalidVarint => f.write_str("Error while parsing a varint"),
         }
     }
 }
