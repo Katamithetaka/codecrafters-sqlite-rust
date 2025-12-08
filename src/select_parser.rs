@@ -193,9 +193,9 @@ pub fn parse_select(select: &str) -> Result<ParsedSelect, ParsingError> {
     let column_names: Vec<Option<String>> =
         parse_comma_separated_after(select, "SELECT", select_keyword, Some(from_keyword))
             .iter()
-            .map(|column| match column.as_str() {
+            .map(|column| match column.to_uppercase().as_str() {
                 "COUNT(*)" => None,
-                value => Some(value.to_string()),
+                _ => Some(column.clone()),
             })
             .collect();
     let table_name = parse_comma_separated_after(select, "FROM", from_keyword, where_keyword);
