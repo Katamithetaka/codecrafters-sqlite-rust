@@ -1,7 +1,7 @@
 
 use crate::{parsing_error::ParsingError};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum SerialType {
     Null,
     I8,

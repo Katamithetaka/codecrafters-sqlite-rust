@@ -29,7 +29,7 @@ pub fn parse_varint(offset: &mut usize, buffer: &[u8]) -> Result<Varint, Parsing
     for i in 0..9 {
         if i < 8 {
             result = (result << 7) | (buffer[*offset+i] & 0b0111_1111) as i128;
-            if !is_msb_set(buffer[i]) {
+            if !is_msb_set(buffer[*offset+i]) {
                 *offset += i+1;
                 return Ok(result);
             }

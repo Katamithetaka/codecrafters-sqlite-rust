@@ -7,6 +7,8 @@ pub mod varint;
 pub mod select_builder;
 pub mod cell;
 pub mod leaf_cell;
+pub mod select_parser;
+pub mod table_parser;
 pub mod prelude {
     pub use crate::reader::*;
 }
