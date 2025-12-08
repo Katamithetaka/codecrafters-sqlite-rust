@@ -103,8 +103,8 @@ pub fn parse_comma_separated_after(
  * (.1 == false => Or)
  */
 pub fn find_next_where_comp(select: &str, index: usize) -> Option<(usize, bool)> {
-    let and_index = select[index..].to_uppercase().find("AND");
-    let or_index = select[index..].to_uppercase().find("OR");
+    let and_index = select[index..].to_uppercase().find(" AND");
+    let or_index = select[index..].to_uppercase().find(" OR");
 
     match (and_index, or_index) {
         (Some(and_index), Some(or_index)) => Some((and_index.min(or_index), and_index < or_index)),
@@ -122,7 +122,7 @@ pub fn parse_where_cmp(select: &str) -> Result<ParsedWhere, ParsingError> {
         .collect::<Vec<_>>();
     
     assert!(tokens.len() >= 3);
-
+    
     let column = tokens[0].trim();
     let op = match tokens[1] {
         "=" => Op::Eq,
@@ -130,11 +130,17 @@ pub fn parse_where_cmp(select: &str) -> Result<ParsedWhere, ParsingError> {
         ">=" => Op::GtEq,
         "<" => Op::Lt,
         "<=" => Op::LtEq,
-        _ => return Err(ParsingError::InvalidStatement),
+        _ => return {
+            eprintln!("Coudln't find op");
+            Err(ParsingError::InvalidStatement)
+        },
     };
     let op_index = match select.find(op.as_str()) {
         Some(value) => value + op.as_str().len(),
-        None => return Err(ParsingError::InvalidStatement),
+        None => {
+            eprintln!("Coudln't find op (second time)");
+            return Err(ParsingError::InvalidStatement)
+        },
     };
 
     let value = parse_value(&select[op_index..].trim());
@@ -155,14 +161,14 @@ pub fn parse_where(select: &str, index: usize) -> Result<ParsedWhere, ParsingErr
         Some((end, /* is_and = */ true)) => Ok(ParsedWhere {
             combinator: Some(ParsedCombinator::And(Box::new(parse_where(
                 select,
-                index + end + "AND".len(),
+                index + end + " AND".len(),
             )?))),
             ..parse_where_cmp(&select[index..(index + end)])?
         }),
         Some((end, /* is_and = */ false)) => Ok(ParsedWhere {
             combinator: Some(ParsedCombinator::Or(Box::new(parse_where(
                 select,
-                index + end + "OR".len(),
+                index + end + " OR".len(),
             )?))),
             ..parse_where_cmp(&select[index..(index + end)])?
         }),
