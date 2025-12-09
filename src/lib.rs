@@ -11,6 +11,7 @@ pub mod select_parser;
 pub mod sqlite_header;
 pub mod table_parser;
 pub mod varint;
+pub mod parsing_utils;
 pub mod prelude {
     pub use crate::reader::*;
 }

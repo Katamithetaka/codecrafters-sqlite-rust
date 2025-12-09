@@ -1,4 +1,4 @@
-use crate::parsing_error::ParsingError;
+use crate::{parsing_error::ParsingError, parsing_utils::find_keyword};
 
 #[derive(Debug)]
 pub enum TableColumn {
@@ -25,14 +25,8 @@ impl Table {
 
 pub fn parse_table(sql: &str) -> Result<Table, ParsingError> {
     let sql = sql.trim();
-    let create_keyword = sql
-        .to_lowercase()
-        .find("create")
-        .ok_or(ParsingError::InvalidStatement)?;
-    let table_keyword = sql
-        .to_lowercase()
-        .find("table")
-        .ok_or(ParsingError::InvalidStatement)?;
+    let create_keyword = find_keyword(sql, "CREATE").ok_or(ParsingError::InvalidStatement)?;
+    let table_keyword = find_keyword(sql, "TABLE").ok_or(ParsingError::InvalidStatement)?;
 
     if create_keyword != 0 || table_keyword <= create_keyword {
         return Err(ParsingError::InvalidStatement);
@@ -60,7 +54,7 @@ pub fn parse_table(sql: &str) -> Result<Table, ParsingError> {
             // oversimplification: it could come from a sequence too.
             if column_tokens
                 .iter()
-                .position(|v| v == &"autoincrement")
+                .position(|v| v.to_lowercase() == "autoincrement")
                 .is_some_and(|position| position != 0)
             {
                 return TableColumn::RowId(column_tokens[0].to_string());

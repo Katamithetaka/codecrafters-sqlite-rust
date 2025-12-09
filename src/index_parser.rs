@@ -1,4 +1,4 @@
-use crate::parsing_error::ParsingError;
+use crate::{parsing_error::ParsingError, parsing_utils::find_keyword};
 
 #[derive(Debug)]
 pub struct IndexData {
@@ -8,24 +8,15 @@ pub struct IndexData {
     pub root_page: u64,
 }
 
-const INDEX_KEYWORD: &str = " INDEX ";
-const CREATE_KEYWORD: &str = "CREATE ";
-const ON_KEYWORD: &str = "ON ";
+const INDEX_KEYWORD: &str = "INDEX";
+const CREATE_KEYWORD: &str = "CREATE";
+const ON_KEYWORD: &str = "ON";
 
 pub fn parse_index(root_page: u64, sql: &str) -> Result<IndexData, ParsingError> {
     let sql = sql.trim();
-    let create = sql
-        .to_uppercase()
-        .find(CREATE_KEYWORD)
-        .ok_or(ParsingError::InvalidStatement)?;
-    let index = sql
-        .to_uppercase()
-        .find(INDEX_KEYWORD)
-        .ok_or(ParsingError::InvalidStatement)?;
-    let on = sql
-        .to_uppercase()
-        .find(ON_KEYWORD)
-        .ok_or(ParsingError::InvalidStatement)?;
+    let create = find_keyword(sql, CREATE_KEYWORD).ok_or(ParsingError::InvalidStatement)?;
+    let index = find_keyword(sql, INDEX_KEYWORD).ok_or(ParsingError::InvalidStatement)?;
+    let on = find_keyword(sql, ON_KEYWORD).ok_or(ParsingError::InvalidStatement)?;
 
     let table_name_end = sql.find("(").ok_or(ParsingError::InvalidStatement)?;
     let columns_end = sql.rfind(")").ok_or(ParsingError::InvalidStatement)?;

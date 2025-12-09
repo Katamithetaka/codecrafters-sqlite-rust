@@ -1,12 +1,12 @@
 use std::fmt::Display;
 
-use crate::{parsing_error::ParsingError, select_builder::Op};
+use crate::{parsing_error::ParsingError, parsing_utils::find_keyword, select_builder::Op};
 
-const WHERE_KEYWORD: &str = " WHERE";
+const WHERE_KEYWORD: &str = "WHERE";
 const SELECT_KEYWORD: &str = "SELECT";
-const FROM_KEYWORD: &str = " FROM";
-const OR_KEYWORD: &str = " OR ";
-const AND_KEYWORD: &str = " AND ";
+const FROM_KEYWORD: &str = "FROM";
+const OR_KEYWORD: &str = "OR";
+const AND_KEYWORD: &str = "AND";
 
 pub fn is_quoted(value: &str) -> bool {
     return value.starts_with("\"") && value.ends_with("\"");
@@ -132,8 +132,8 @@ pub fn parse_comma_separated_after(
  * (.1 == false => Or)
  */
 pub fn find_next_where_comp(select: &str, index: usize) -> Option<(usize, bool)> {
-    let and_index = select[index..].to_uppercase().find(AND_KEYWORD);
-    let or_index = select[index..].to_uppercase().find(OR_KEYWORD);
+    let and_index = find_keyword(&select[index..], AND_KEYWORD);
+    let or_index = find_keyword(&select[index..], OR_KEYWORD);
 
     match (and_index, or_index) {
         (Some(and_index), Some(or_index)) => Some((and_index.min(or_index), and_index < or_index)),
@@ -208,9 +208,9 @@ pub fn parse_where(select: &str, index: usize) -> Result<ParsedWhere, ParsingErr
 
 pub fn parse_select(select: &str) -> Result<ParsedSelect, ParsingError> {
     let select = select.trim_start();
-    let select_keyword = select.to_uppercase().find(SELECT_KEYWORD);
-    let from_keyword = select.to_uppercase().find(FROM_KEYWORD);
-    let where_keyword = select.to_uppercase().find(WHERE_KEYWORD);
+    let select_keyword = find_keyword(select, SELECT_KEYWORD);
+    let from_keyword = find_keyword(select, FROM_KEYWORD);
+    let where_keyword = find_keyword(select, WHERE_KEYWORD);
 
     let (Some(select_keyword), Some(from_keyword)) = (select_keyword, from_keyword) else {
         eprintln!("Couldn't find SELECT or FROM");
