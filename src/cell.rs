@@ -191,59 +191,15 @@ pub fn binary_search_leaf_page(
         return Ok(vec![]);
     }
 
-    // Arbitrary end of recursion
-    if cell_array.len() <= 4 {
-        let results: Vec<LazyLeafCell> = cell_array
-            .into_iter()
-            .map(|cell| parse_leaf_cell_lazy(&page.page, *cell as usize, Rc::clone(&page.page)))
-            .filter(|cell| cell.as_ref().is_ok_and(|cell| rowids.contains(&cell.rowid)))
-            .collect::<Result<Vec<_>, _>>()?;
-        return Ok(results);
-    }
-
-    let middle_point = cell_array.len() / 2;
-    let middle_point_cell = parse_leaf_cell_lazy(
-        &page.page,
-        cell_array[middle_point] as usize,
-        Rc::clone(&page.page),
-    )?;
-
-    let left_rowids: Vec<i128> = rowids
-        .iter()
-        .filter(|&&rowid| rowid <= middle_point_cell.rowid)
-        .copied()
-        .collect();
-    let right_rowids: Vec<i128> = rowids
-        .iter()
-        .filter(|&&rowid| rowid > middle_point_cell.rowid)
-        .copied()
-        .collect();
-
-    let mut return_vec = vec![];
-
-    if !left_rowids.is_empty() {
-        return_vec.append(
-            &mut binary_search_leaf_page(
-                page,
-                &cell_array[0..=middle_point],
-                reader,
-                &left_rowids,
-            )?
-        );
-    }
+    // For leaf pages, just search all cells linearly
+    // This is simpler and more reliable than binary search
+    let results: Vec<LazyLeafCell> = cell_array
+        .into_iter()
+        .map(|cell| parse_leaf_cell_lazy(&page.page, *cell as usize, Rc::clone(&page.page)))
+        .filter(|cell| cell.as_ref().is_ok_and(|cell| rowids.contains(&cell.rowid)))
+        .collect::<Result<Vec<_>, _>>()?;
     
-    if !right_rowids.is_empty() {
-        return_vec.append(
-            &mut binary_search_leaf_page(
-                page,
-                &cell_array[middle_point + 1..],
-                reader,
-                &right_rowids,
-            )?
-        );
-    }
-
-    return Ok(return_vec);
+    return Ok(results);
 }
 
 pub fn binary_search_cells_lazy(
