@@ -2,6 +2,12 @@ use std::fmt::Display;
 
 use crate::{parsing_error::ParsingError, select_builder::Op};
 
+const WHERE_KEYWORD: &str = " WHERE";
+const SELECT_KEYWORD: &str = "SELECT";
+const FROM_KEYWORD: &str = " FROM";
+const OR_KEYWORD: &str = " OR ";
+const AND_KEYWORD: &str = " AND ";
+
 pub fn is_quoted(value: &str) -> bool {
     return value.starts_with("\"") && value.ends_with("\"");
 }
@@ -126,8 +132,8 @@ pub fn parse_comma_separated_after(
  * (.1 == false => Or)
  */
 pub fn find_next_where_comp(select: &str, index: usize) -> Option<(usize, bool)> {
-    let and_index = select[index..].to_uppercase().find(" AND");
-    let or_index = select[index..].to_uppercase().find(" OR");
+    let and_index = select[index..].to_uppercase().find(AND_KEYWORD);
+    let or_index = select[index..].to_uppercase().find(OR_KEYWORD);
 
     match (and_index, or_index) {
         (Some(and_index), Some(or_index)) => Some((and_index.min(or_index), and_index < or_index)),
@@ -143,7 +149,6 @@ pub fn parse_where_cmp(select: &str) -> Result<ParsedWhere, ParsingError> {
         .split(" ")
         .filter(|entry| !entry.is_empty())
         .collect::<Vec<_>>();
-
     assert!(tokens.len() >= 3);
 
     let column = tokens[0].trim();
@@ -186,14 +191,14 @@ pub fn parse_where(select: &str, index: usize) -> Result<ParsedWhere, ParsingErr
         Some((end, /* is_and = */ true)) => Ok(ParsedWhere {
             combinator: Some(ParsedCombinator::And(Box::new(parse_where(
                 select,
-                index + end + " AND".len(),
+                index + end + AND_KEYWORD.len(),
             )?))),
             ..parse_where_cmp(&select[index..(index + end)])?
         }),
         Some((end, /* is_and = */ false)) => Ok(ParsedWhere {
             combinator: Some(ParsedCombinator::Or(Box::new(parse_where(
                 select,
-                index + end + " OR".len(),
+                index + end + OR_KEYWORD.len(),
             )?))),
             ..parse_where_cmp(&select[index..(index + end)])?
         }),
@@ -203,9 +208,9 @@ pub fn parse_where(select: &str, index: usize) -> Result<ParsedWhere, ParsingErr
 
 pub fn parse_select(select: &str) -> Result<ParsedSelect, ParsingError> {
     let select = select.trim_start();
-    let select_keyword = select.to_uppercase().find("SELECT");
-    let from_keyword = select.to_uppercase().find("FROM");
-    let where_keyword = select.to_uppercase().find("WHERE");
+    let select_keyword = select.to_uppercase().find(SELECT_KEYWORD);
+    let from_keyword = select.to_uppercase().find(FROM_KEYWORD);
+    let where_keyword = select.to_uppercase().find(WHERE_KEYWORD);
 
     let (Some(select_keyword), Some(from_keyword)) = (select_keyword, from_keyword) else {
         eprintln!("Couldn't find SELECT or FROM");
@@ -224,17 +229,17 @@ pub fn parse_select(select: &str) -> Result<ParsedSelect, ParsingError> {
     }
 
     let column_names: Vec<Option<String>> =
-        parse_comma_separated_after(select, "SELECT", select_keyword, Some(from_keyword))
+        parse_comma_separated_after(select, SELECT_KEYWORD, select_keyword, Some(from_keyword))
             .iter()
             .map(|column| match column.to_uppercase().as_str() {
                 "COUNT(*)" => None,
                 _ => Some(column.clone()),
             })
             .collect();
-    let table_name = parse_comma_separated_after(select, "FROM", from_keyword, where_keyword);
+    let table_name = parse_comma_separated_after(select, FROM_KEYWORD, from_keyword, where_keyword);
 
     let where_cmp = where_keyword
-        .map(|index| parse_where(select, index + "WHERE".len()))
+        .map(|index| parse_where(select, index + WHERE_KEYWORD.len()))
         .transpose()?;
 
     if table_name.len() > 1 {

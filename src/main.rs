@@ -130,7 +130,7 @@ fn main() -> Result<()> {
             if where_columns_count != 1 {
                 table_index = None; // Only support one column for index search (because I don't want to implement complex logic for indices)
             }
-
+            
             assert!(table_data.len() == 1);
 
             let (root_page, sql) = (
