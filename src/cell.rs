@@ -248,7 +248,7 @@ pub fn binary_search_cells_lazy(
             
             let rightmost_rowids: Vec<_> = rowids
                 .iter()
-                .filter(|rowid| **rowid >= last_cell.rowid)
+                .filter(|rowid| **rowid > last_cell.rowid)
                 .copied()
                 .collect();
             
