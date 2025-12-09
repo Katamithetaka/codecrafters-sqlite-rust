@@ -184,7 +184,7 @@ pub fn binary_search_interior_table_page(
 pub fn binary_search_leaf_page(
     page: &Page,
     cell_array: &[u16],
-    reader: &mut SqliteReader,
+    _reader: &mut SqliteReader,
     rowids: &[i128],
 ) -> Result<Vec<LazyLeafCell>, ParsingError> {
     if rowids.is_empty() || cell_array.is_empty() {
