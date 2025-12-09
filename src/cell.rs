@@ -165,8 +165,8 @@ pub fn binary_search_interior_table_page(
         let matching_rowids: Vec<i128> = rowids
             .iter()
             .filter(|&&rowid| {
-                let above_prev = prev_rowid.map_or(true, |prev| rowid >= prev);
-                let below_curr = rowid < cell.rowid;
+                let above_prev = prev_rowid.map_or(true, |prev| rowid > prev);
+                let below_curr = rowid <= cell.rowid;
                 above_prev && below_curr
             })
             .copied()
@@ -235,7 +235,7 @@ pub fn binary_search_cells_lazy(
 
             let rowids_filtered: Vec<_> = rowids
                 .iter()
-                .filter(|rowid| **rowid < last_cell.rowid)
+                .filter(|rowid| **rowid <= last_cell.rowid)
                 .copied()
                 .collect();
 
