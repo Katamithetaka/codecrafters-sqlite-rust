@@ -3,7 +3,7 @@ use std::fmt::Display;
 use crate::{parsing_error::ParsingError, select_builder::Op};
 
 pub fn is_quoted(value: &str) -> bool {
-    return value.starts_with("\"") && value.ends_with("\"")
+    return value.starts_with("\"") && value.ends_with("\"");
 }
 
 pub fn quoted<T: AsRef<str>>(value: T) -> String {
@@ -18,14 +18,24 @@ pub fn quoted<T: AsRef<str>>(value: T) -> String {
 }
 
 pub fn parse_value(value: &str) -> String {
-    if value.starts_with("\"") || value.starts_with("\'") { return quoted(value) };
+    if value.starts_with("\"") || value.starts_with("\'") {
+        return quoted(value);
+    };
     return value.to_string();
 }
-
 
 pub enum ParsedCombinator {
     And(Box<ParsedWhere>),
     Or(Box<ParsedWhere>),
+}
+
+impl ParsedCombinator {
+    pub fn get_where(&self) -> &ParsedWhere {
+        match self {
+            ParsedCombinator::And(parsed_where) => &parsed_where,
+            ParsedCombinator::Or(parsed_where) => &parsed_where,
+        }
+    }
 }
 
 pub struct ParsedExpression {
@@ -43,6 +53,19 @@ pub struct ParsedSelect {
     pub table_name: String,
     pub columns: Vec<Option<String>>,
     pub where_comp: Option<ParsedWhere>,
+}
+
+impl ParsedWhere {
+    pub fn get_columns(&self) -> Vec<String> {
+        let mut return_val = vec![self.expression.column.clone()];
+
+        match &self.combinator {
+            Some(comp) => return_val.append(&mut comp.get_where().get_columns()),
+            None => {},
+        }
+
+        return return_val;
+    }
 }
 
 impl Display for ParsedWhere {
@@ -120,9 +143,9 @@ pub fn parse_where_cmp(select: &str) -> Result<ParsedWhere, ParsingError> {
         .split(" ")
         .filter(|entry| !entry.is_empty())
         .collect::<Vec<_>>();
-    
+
     assert!(tokens.len() >= 3);
-    
+
     let column = tokens[0].trim();
     let op = match tokens[1] {
         "=" => Op::Eq,
@@ -130,17 +153,19 @@ pub fn parse_where_cmp(select: &str) -> Result<ParsedWhere, ParsingError> {
         ">=" => Op::GtEq,
         "<" => Op::Lt,
         "<=" => Op::LtEq,
-        _ => return {
-            eprintln!("Coudln't find op");
-            Err(ParsingError::InvalidStatement)
-        },
+        _ => {
+            return {
+                eprintln!("Coudln't find op");
+                Err(ParsingError::InvalidStatement)
+            };
+        }
     };
     let op_index = match select.find(op.as_str()) {
         Some(value) => value + op.as_str().len(),
         None => {
             eprintln!("Coudln't find op (second time)");
-            return Err(ParsingError::InvalidStatement)
-        },
+            return Err(ParsingError::InvalidStatement);
+        }
     };
 
     let value = parse_value(&select[op_index..].trim());
@@ -191,7 +216,9 @@ pub fn parse_select(select: &str) -> Result<ParsedSelect, ParsingError> {
         eprintln!("Select keyword should always be before from");
         return Err(ParsingError::InvalidStatement);
     }
-    if let Some(where_keyword) = where_keyword && !(from_keyword < where_keyword) {
+    if let Some(where_keyword) = where_keyword
+        && !(from_keyword < where_keyword)
+    {
         eprintln!("Where keyword should always be after from");
         return Err(ParsingError::InvalidStatement);
     }
@@ -205,7 +232,7 @@ pub fn parse_select(select: &str) -> Result<ParsedSelect, ParsingError> {
             })
             .collect();
     let table_name = parse_comma_separated_after(select, "FROM", from_keyword, where_keyword);
-    
+
     let where_cmp = where_keyword
         .map(|index| parse_where(select, index + "WHERE".len()))
         .transpose()?;
@@ -214,7 +241,7 @@ pub fn parse_select(select: &str) -> Result<ParsedSelect, ParsingError> {
         eprintln!("Can't currently handle more than one table");
         return Err(ParsingError::InvalidStatement);
     }
-    
+
     if column_names.is_empty() {
         eprintln!("Couldn't find any column names");
         return Err(ParsingError::InvalidStatement);

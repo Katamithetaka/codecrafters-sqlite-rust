@@ -18,6 +18,49 @@ pub enum SerialType {
     String(usize),
 }
 
+pub fn parse_i24_big_endian(bytes: &[u8]) -> Result<i32, ParsingError> {
+    if bytes.len() < 3 {
+        return Err(ParsingError::InvalidVarint);
+    }
+
+    // Assemble the 3 bytes into an unsigned 32-bit value
+    let raw: u32 = ((bytes[0] as u32) << 16) | ((bytes[1] as u32) << 8) | (bytes[2] as u32);
+
+    // If the sign bit (bit 23) is set, sign-extend to 32 bits.
+    let value: i32 = if (raw & 0x0080_0000) != 0 {
+        // Set the high byte to 0xFF to sign-extend
+        (raw | 0xFF00_0000) as i32
+    } else {
+        raw as i32
+    };
+
+    Ok(value)
+}
+
+pub fn parse_i48_big_endian(bytes: &[u8]) -> Result<i64, ParsingError> {
+    if bytes.len() < 6 {
+        return Err(ParsingError::InvalidVarint);
+    }
+
+    // Assemble the 6 bytes into an unsigned 64-bit value
+    let raw: u64 = ((bytes[0] as u64) << 40)
+        | ((bytes[1] as u64) << 32)
+        | ((bytes[2] as u64) << 24)
+        | ((bytes[3] as u64) << 16)
+        | ((bytes[4] as u64) << 8)
+        | (bytes[5] as u64);
+
+    // If the sign bit (bit 47) is set, sign-extend to 64 bits.
+    let value: i64 = if (raw & 0x0000_8000_0000_0000u64) != 0 {
+        // Set the high 16 bits to 1 to sign-extend a 48-bit value to 64 bits
+        (raw | 0xFFFF_0000_0000_0000u64) as i64
+    } else {
+        raw as i64
+    };
+
+    Ok(value)
+}
+
 impl SerialType {
     pub fn from_varint(value: i128) -> Result<SerialType, ParsingError> {
         let value = match value {
@@ -55,6 +98,7 @@ impl SerialType {
             SerialType::Blob(size) => *size,
             SerialType::String(size) => *size,
         };
+        
     }
 
     pub fn parse_value(&self, bytes: &[u8]) -> Result<String, ParsingError> {
@@ -62,9 +106,9 @@ impl SerialType {
             SerialType::Null => Ok("NULL".to_string()),
             SerialType::I8 => Ok(format!("{}", i8::from_be_bytes(bytes[0..1].try_into()?))),
             SerialType::I16 => Ok(format!("{}", i16::from_be_bytes(bytes[0..2].try_into()?))),
-            SerialType::I24 => Ok(format!("{}", "unimplemented")),
+            SerialType::I24 => Ok(format!("{}", parse_i24_big_endian(&bytes[0..3])?)),
             SerialType::I32 => Ok(format!("{}", i32::from_be_bytes(bytes[0..4].try_into()?))),
-            SerialType::I48 => Ok(format!("{}", "unimplemented")),
+            SerialType::I48 => Ok(format!("{}", parse_i48_big_endian(&bytes[0..6])?)),
             SerialType::I64 => Ok(format!("{}", i64::from_be_bytes(bytes[0..8].try_into()?))),
             SerialType::Double => Ok(format!("{}", f64::from_be_bytes(bytes[0..8].try_into()?))),
             SerialType::False => Ok("false".to_string()),
@@ -83,9 +127,9 @@ impl SerialType {
             SerialType::Null => Ok("NULL".to_string()),
             SerialType::I8 => Ok(format!("{}", i8::from_be_bytes(bytes[0..1].try_into()?))),
             SerialType::I16 => Ok(format!("{}", i16::from_be_bytes(bytes[0..2].try_into()?))),
-            SerialType::I24 => Ok(format!("{}", format!("{}", "unimplemented"))),
+            SerialType::I24 => Ok(format!("{}", format!("{}", "unimplemented i24"))),
             SerialType::I32 => Ok(format!("{}", i32::from_be_bytes(bytes[0..4].try_into()?))),
-            SerialType::I48 => Ok(format!("{}", format!("{}", "unimplemented"))),
+            SerialType::I48 => Ok(format!("{}", format!("{}", "unimplemented i48"))),
             SerialType::I64 => Ok(format!("{}", i64::from_be_bytes(bytes[0..8].try_into()?))),
             SerialType::Double => Ok(format!("{}", f64::from_be_bytes(bytes[0..8].try_into()?))),
             SerialType::False => Ok("false".to_string()),
@@ -125,7 +169,7 @@ impl LazyLeafCell {
         return self.record_types[column];
     }
 
-    pub fn get_column(&self, _page_bytes: &[u8], column: usize) -> Result<String, ParsingError> {
+    pub fn get_column(&self, column: usize) -> Result<String, ParsingError> {
         let column_offset = self.get_column_offset(column);
         let column_size = self.get_column_size(column);
         let column_type = self.get_column_type(column);
@@ -136,7 +180,6 @@ impl LazyLeafCell {
 
     pub fn get_column_cmp(
         &self,
-        _page_bytes: &[u8],
         column: usize,
     ) -> Result<String, ParsingError> {
         let column_offset = self.get_column_offset(column);
