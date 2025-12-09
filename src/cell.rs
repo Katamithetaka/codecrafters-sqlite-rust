@@ -137,9 +137,6 @@ pub fn binary_search_interior_table_page(
     reader: &mut SqliteReader,
     rowids: &[i128],
 ) -> Result<Vec<LazyLeafCell>, ParsingError> {
-    if rowids.contains(&987266) {
-        eprintln!(">>> binary_search_interior_table_page: {} cells, rowids contains 987266", cell_array.len());
-    }
     if rowids.is_empty() || cell_array.is_empty() {
         return Ok(vec![]);
     }
@@ -176,9 +173,6 @@ pub fn binary_search_interior_table_page(
             .collect();
         
         if !matching_rowids.is_empty() {
-            if matching_rowids.contains(&987266) {
-                eprintln!(">>> Cell[{}] prev={:?}, curr={}, matches 987266, searching page {}", i, prev_rowid, cell.rowid, cell.page_number);
-            }
             let child_page = reader.read_page(cell.page_number as u64)?;
             results.append(&mut binary_search_cells_lazy(&child_page, reader, &matching_rowids)?);
         }
@@ -245,10 +239,6 @@ pub fn binary_search_cells_lazy(
                 .copied()
                 .collect();
 
-            if rowids.contains(&987266) {
-                eprintln!(">>> InteriorTablePage: last_cell.rowid={}, filtered contains 987266: {}", last_cell.rowid, rowids_filtered.contains(&987266));
-            }
-
             if rowids_filtered.is_empty() {
                 return binary_search_cells_lazy(&right_most_page, reader, rowids);
             }
@@ -261,10 +251,6 @@ pub fn binary_search_cells_lazy(
                 .filter(|rowid| **rowid >= last_cell.rowid)
                 .copied()
                 .collect();
-            
-            if rowids.contains(&987266) {
-                eprintln!(">>> InteriorTablePage: rightmost contains 987266: {}", rightmost_rowids.contains(&987266));
-            }
             
             if !rightmost_rowids.is_empty() {
                 return_val.append(&mut binary_search_cells_lazy(
